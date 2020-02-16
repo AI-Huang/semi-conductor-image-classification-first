@@ -1,0 +1,6 @@
+{
+  "ROOT_PATH": "/Users/YourName/Documents/semi-conductor-image-classification-first-master",
+  "MODEL_CKPT": "ResNet56v2_from_transfer.h5",
+  "TRAIN_DATA_DIR": "data/train/",
+  "TEST_DATA_DIR": "data/test/all_tests"
+}
