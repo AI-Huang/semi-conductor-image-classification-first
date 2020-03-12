@@ -1,5 +1,9 @@
 # Data
 data/
+tests/
+
+# Archive
+archive*
 
 # Models
 model*/
