@@ -134,7 +134,7 @@ flags.DEFINE_integer(
           ' after finishing the entire training regime).'))
 
 flags.DEFINE_integer(
-    "steps_per_checkpoint", 100, "How many training steps to do per checkpoint.")
+    "steps_per_checkpoint", 100, "How many training steps to do per checkpoint.")  # TODO to be used
 
 flags.DEFINE_integer(
     'eval_timeout',

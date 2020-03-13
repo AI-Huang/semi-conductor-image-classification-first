@@ -1,10 +1,8 @@
 {
   "ROOT_PATH": "D:\\DeepLearningData\\semi-conductor-image-classification-first",
-  "MODEL_CKPT": "ResNet56v2_from_transfer.h5",
+  "MODEL_CKPT": "ResNet56v2.020-auc-0.9648.h5",
   "MODEL_DIR": "models-ResNet56v2",
-  "TRAIN_DATA_DIR": "data\\train\\",
-  "TEST_DATA_DIR": "data\\test\\all_tests",
-  "BATCH_SIZE": 15,
-  "CURRENT_BEST": 0.98866,
-  "MY_BEST": 0.97156
+  "TRAIN_DATA_DIR": "data\\origin\\train\\",
+  "TEST_DATA_DIR": "data\\origin\\test\\all_tests",
+  "BATCH_SIZE": 16
 }

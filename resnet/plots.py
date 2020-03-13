@@ -52,13 +52,7 @@ def plot_scores(epoch_auc):
     # 设置坐标轴刻度
     plt.xticks(np.arange(20, 50, 1))
     plt.yticks(np.arange(0.9, 1, 0.01))
-    """
-    plt.xlim((0, 50))
-    plt.ylim((0, 1))
-    plt.xticks(np.arange(0, 50, 5))
-    plt.yticks(np.arange(0, 1, 0.1))
-    """
-    # grid
+
     plt.grid(True)
     legend = plt.legend(loc='best', shadow=True)
     plt.tight_layout()
@@ -69,8 +63,8 @@ def plot_scores2():
     """ Load Config """
     with open('config.json', 'r') as f:
         CONFIG = json.load(f)
-    current_best = CONFIG["CURRENT_BEST"]
-    my_best = CONFIG["MY_BEST"]
+    current_best = CURRENT_BEST
+    my_best = MY_BEST
 
     """ Read data """
     data_acc = read_data(filepath="./ResNet20v2-epoch-auc.csv")

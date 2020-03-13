@@ -9,6 +9,7 @@ import random
 import pickle
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from tensorflow import keras  # tf2
 # from model import auc # tf1
 from keras.optimizers import Adam
@@ -40,8 +41,11 @@ METRICS = [
 
 
 def main():
+    """ Use tensorflow version 2 """
+    assert tf.__version__[0] == "2"
+
     """ Load Config """
-    with open('config.json', 'r') as f:
+    with open('./config/config.json', 'r') as f:
         CONFIG = json.load(f)
     BATCH_SIZE = CONFIG["BATCH_SIZE"]
     ROOT_PATH = CONFIG["ROOT_PATH"]
@@ -52,14 +56,13 @@ def main():
     MODEL_CKPT = CONFIG["MODEL_CKPT"]
 
     """ Prepare Model """
-    n = 2
+    n = 6
     version = 2
     depth = model_depth(n, version)
     MODEL_TYPE = 'ResNet%dv%d' % (depth, version)
     SAVES_DIR = "models-%s/" % MODEL_TYPE
     SAVES_DIR = os.path.join(ROOT_PATH, SAVES_DIR)
-
-    MODEL_CKPT = os.path.join(SAVES_DIR, "ResNet56v2.020-auc-0.9648.h5")
+    MODEL_CKPT = os.path.join(SAVES_DIR, MODEL_CKPT)
 
     if not os.path.exists(SAVES_DIR):
         os.mkdir(SAVES_DIR)
