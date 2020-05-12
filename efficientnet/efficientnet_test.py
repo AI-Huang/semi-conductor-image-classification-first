@@ -36,7 +36,7 @@ flags.DEFINE_boolean('enable_ema', True, 'Enable exponential moving average.')
 flags.DEFINE_string('export_ckpt', None, 'Exported ckpt for eval graph.')
 flags.DEFINE_string('example_img', './test.img',  # "D:\\DeepLearningData\\semi-conductor-image-classification-first\\semi-conductor-image-classification-first\\test\\all_tests"
                     'Filepath for a single example image.')
-flags.DEFINE_string('tests_dir', "D:\\DeepLearningData\\semi-conductor-image-classification-first\\semi-conductor-image-classification-first\\test\\all_tests",
+flags.DEFINE_string('tests_dir', "D:\\DeepLearningData\\semi-conductor-image-classification-first\\data\\origin\\test\\all_tests",
                     'tests_dir.')
 flags.DEFINE_string('labels_map_file', './labels_map.txt',
                     'Labels map from label id to its meaning.')

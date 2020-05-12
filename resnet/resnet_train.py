@@ -3,19 +3,27 @@
 # @Date    : Feb-03-20 23:44
 # @Author  : Kelly Hwong (you@example.org)
 # @Link    : http://example.org
+
 import os
 import json
 import random
 import pickle
 import numpy as np
 import pandas as pd
+
 import tensorflow as tf
 from tensorflow import keras  # tf2
-# from model import auc # tf1
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
 from keras.preprocessing.image import ImageDataGenerator, load_img
-from resnet import model_depth, resnet_v2, lr_schedule
+# 等价于 from tf.keras.metrics import AUC
+from keras.metrics import AUC, BinaryAccuracy
+from model import model_depth, resnet_v2, lr_schedule, binary_focal_loss
+from metrics import AUC0
+
+# Parameters we care
+START_EPOCH = 134
+ALPHA = 0.01
 
 # Training parameters
 START_EPOCH = 0
@@ -34,73 +42,71 @@ IMAGE_CHANNELS = 1
 INPUT_SHAPE = [IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS]
 
 METRICS = [
-    keras.metrics.BinaryAccuracy(
-        name='accuracy'),
-    keras.metrics.AUC(name='auc')
+    BinaryAccuracy(name='accuracy'),  # 整体的 accuracy
+    AUC(name='auc_good_0'),  # 实际上是以 good 为 positive 的 AUC
+    AUC0(name='auc_bad_1')  # 以 bad 为 positive 的 AUC
 ]
 
 
 def main():
-    """ Use tensorflow version 2 """
+    print("If in eager mode: ", tf.executing_eagerly())
+    print("Use tensorflow version 2.")
     assert tf.__version__[0] == "2"
 
-    """ Load Config """
-    with open('./config/config.json', 'r') as f:
+    print("Load Config ...")
+    with open('./config/config_origin.json', 'r') as f:
         CONFIG = json.load(f)
     BATCH_SIZE = CONFIG["BATCH_SIZE"]
     ROOT_PATH = CONFIG["ROOT_PATH"]
-    TRAIN_DATA_DIR = CONFIG["TRAIN_DATA_DIR"]
-    TEST_DATA_DIR = CONFIG["TEST_DATA_DIR"]
-    TRAIN_DATA_DIR = os.path.join(ROOT_PATH, TRAIN_DATA_DIR)
-    TEST_DATA_DIR = os.path.join(ROOT_PATH, TEST_DATA_DIR)
-    MODEL_CKPT = CONFIG["MODEL_CKPT"]
+    TRAIN_DATA_DIR = os.path.join(ROOT_PATH, CONFIG["TRAIN_DATA_DIR"])
 
-    """ Prepare Model """
-    n = 6
+    print("Prepare Model")
+    n = 2  # order of ResNetv2, 2 or 6
     version = 2
     depth = model_depth(n, version)
     MODEL_TYPE = 'ResNet%dv%d' % (depth, version)
-    SAVES_DIR = "models-%s/" % MODEL_TYPE
-    SAVES_DIR = os.path.join(ROOT_PATH, SAVES_DIR)
-    MODEL_CKPT = os.path.join(SAVES_DIR, MODEL_CKPT)
+    SAVES_DIR = os.path.join(ROOT_PATH, "models-%s/" % MODEL_TYPE)
+    MODEL_CKPT = os.path.join(SAVES_DIR, CONFIG["MODEL_CKPT"])
 
     if not os.path.exists(SAVES_DIR):
         os.mkdir(SAVES_DIR)
     model = resnet_v2(input_shape=INPUT_SHAPE, depth=depth, num_classes=2)
-    model.compile(loss='categorical_crossentropy',
+    model.compile(loss=[binary_focal_loss(alpha=ALPHA, gamma=1)],
                   optimizer=Adam(learning_rate=lr_schedule(TRAINING_EPOCHS)),
                   metrics=METRICS)
     # model.summary()
     print(MODEL_TYPE)
 
-    """ Resume Training """
+    print("Resume Training...")
     model_ckpt_file = MODEL_CKPT
-    if os.path.exists(model_ckpt_file):
+    if os.path.isfile(model_ckpt_file):
         print("Model ckpt found! Loading...:%s" % model_ckpt_file)
         model.load_weights(model_ckpt_file)
 
     # Prepare model model saving directory.
     # model_name = "%s.%03d-val_accuracy-{val_accuracy:.4f}.h5" % (MODEL_TYPE, epoch+START_EPOCH)
-    model_name = "%s.%d-{epoch:03d}-auc-{auc:.4f}.h5" % (
-        MODEL_TYPE, START_EPOCH)
-    filepath = os.path.join(SAVES_DIR, model_name)
+    model_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
 
+    filepath = os.path.join(SAVES_DIR, model_name)
     # Prepare callbacks for model saving and for learning rate adjustment.
-    checkpoint = ModelCheckpoint(filepath=filepath, monitor="auc", verbose=1)
+    checkpoint = ModelCheckpoint(
+        filepath=filepath, monitor="auc_good_0", verbose=1)
+    csv_logger = CSVLogger('training.log.csv', append=True)
     earlystop = EarlyStopping(patience=10)
-    learning_rate_reduction = ReduceLROnPlateau(monitor="auc",
+    learning_rate_reduction = ReduceLROnPlateau(monitor="auc_good_0",
                                                 patience=2,
                                                 verbose=1,
                                                 factor=0.5,
                                                 min_lr=0.00001)
-    callbacks = [learning_rate_reduction, checkpoint]  # 不要 earlystop
+    callbacks = [csv_logger, learning_rate_reduction,
+                 checkpoint]  # 不要 earlystop
 
-    """ Training Generator """
     print('Using real-time data augmentation.')
+    print("Training Generator...")
     train_datagen = ImageDataGenerator(
         validation_split=0.2,
-        rotation_range=15,
         rescale=1./255,
+        rotation_range=15,
         shear_range=0.1,
         zoom_range=0.2,
         horizontal_flip=True,
@@ -119,8 +125,10 @@ def main():
         seed=42
     )
 
-    """ Validation Generator """
-    valid_datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
+    print("Class_indices: ", train_generator.class_indices)
+
+    print("Validation Generator...")
+    valid_datagen = ImageDataGenerator(validation_split=0.2, rescale=1./255)
     validation_generator = valid_datagen.flow_from_directory(
         TRAIN_DATA_DIR,
         subset='validation',
@@ -132,7 +140,7 @@ def main():
         seed=42
     )
 
-    """ Fit Model """
+    print("Fit Model...")
     epochs = 3 if IF_FAST_RUN else TRAINING_EPOCHS
     history = model.fit_generator(
         train_generator,
@@ -140,13 +148,14 @@ def main():
         validation_data=validation_generator,
         validation_steps=TOTAL_VALIDATE//BATCH_SIZE,
         steps_per_epoch=TOTAL_TRAIN//BATCH_SIZE,
-        callbacks=callbacks
+        callbacks=callbacks,
+        initial_epoch=START_EPOCH
     )
 
-    """ Save Model """
+    print("Save Model...")
     model.save_weights("model-" + MODEL_TYPE + ".h5")
 
-    """ Save History """
+    print("Save History...")
     with open('./history', 'wb') as pickle_file:
         pickle.dump(history.history, pickle_file)
 

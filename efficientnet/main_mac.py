@@ -610,6 +610,8 @@ def export(est, export_dir, input_image_size=None):
 
 
 def main(unused_argv):
+    """ Use tensorflow version 2 """
+    assert tf.__version__[0] == "2"
 
     input_image_size = FLAGS.input_image_size
     if not input_image_size:

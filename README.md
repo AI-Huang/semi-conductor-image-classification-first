@@ -18,7 +18,11 @@ Good chips for example:
 
 主要用了简单 CNN，ResNet20v2，和 ResNet56v2。v2 代表使用的是 ResNet version 2，20 和 56 是层数。
 
-## ResNet
+## Loss Function
+
+Loss Function 使用 `categorical_crossentropy`, 随后又使用[tensorflow imbalanced_data](https://www.tensorflow.org/tutorials/structured_data/imbalanced_data)中方法进行 class weights 加权。
+
+## Results
 
 Current best score is obtained by ResNet56v2:
 

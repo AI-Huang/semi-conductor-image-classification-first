@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from utils import read_data
+from utils import read_TP, read_TN
 
 # data path
 MODEL_SAVES_DIR = "./models-resnetv2/"
@@ -169,10 +170,6 @@ def plot_train_samples():
     plt.show()
 
 
-def plot_epoch_auc():
-    pass
-
-
 def plot_simpleCNN():
     """ Read data """
     data_acc = read_data(filepath="./simpleCNN-epoch-acc.csv")
@@ -264,10 +261,35 @@ def plot_ResNet56():
     plt.show()
 
 
+def plot_TPR():
+    thresholds = np.linspace(0, 1, num=200)
+    # print(thresholds)
+    # threshold = 0.5
+    tprs = []
+    fprs = []
+    for threshold in thresholds:
+        tp, fn = read_TP(
+            "./TPR/TP-ResNet56v2.109-auc-0.9832.h5.csv", threshold=threshold)
+        tn, fp = read_TN(
+            "./TPR/TN-ResNet56v2.109-auc-0.9832.h5.csv", threshold=threshold)
+        # print(tp, fn)  # 444 156, of 600
+        # print(tn, fp)  # 5357 43, of 5400
+        tpr = tp / (tp + fn)
+        fpr = fp / (fp + tn)
+        tprs.append(tpr)
+        fprs.append(fpr)
+        # print(tpr, fpr)
+    plt.plot(fprs, tprs)
+    return None
+
+
 def main():
     # plot_simpleCNN()
     # plot_ResNet56()
-    plot_ResNet20()
+    # plot_ResNet20()
+    plot_TPR()
+    plt.legend()
+    plt.show()
     return
     # plot_train_samples()
 

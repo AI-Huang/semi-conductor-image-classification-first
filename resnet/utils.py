@@ -31,6 +31,8 @@ def change_positive_column():
 
 
 def read_data(filepath=""):
+    """
+    """
     data = []
     with open(filepath, "r") as csvfile:
         reader = csv.reader(csvfile)
@@ -44,6 +46,59 @@ def read_data(filepath=""):
     data = np.asarray(data)
     data = data[data[:, 0].argsort()]  # 按照第一列排序
     return data
+
+
+def read_TP(filepath="", threshold=0.5):
+    """读取csv文件的概率
+    csv文件第一列是文件名
+    第二列是 sample 是 bad 类别的概率
+    """
+    tp = 0  # predict bad as indeed bad
+    fn = 0  # predict good, actually bad
+    with open(filepath, "r") as csvfile:
+        reader = csv.reader(csvfile)
+        for i, row in enumerate(reader):
+            if i == 0:
+                continue
+            # print("row:", row)
+            if float(row[1]) >= threshold:  # predict > threshold
+                tp += 1
+            else:
+                fn += 1
+    return tp, fn
+
+
+def read_TN(filepath="", threshold=0.5):
+    """读取csv文件的概率
+    csv文件第一列是文件名
+    第二列是 sample 是 bad 类别的概率
+    """
+    tn = 0  # predict good as indeed good
+    fp = 0  # predict bad, actually good
+    with open(filepath, "r") as csvfile:
+        reader = csv.reader(csvfile)
+        for i, row in enumerate(reader):
+            if i == 0:
+                continue
+            # print("row:", row)
+            if float(row[1]) < threshold:  # predict > threshold
+                tn += 1
+            else:
+                fp += 1
+    return tn, fp
+
+
+def count_TP(filepath=""):
+    count = 0
+    with open(filepath, "r") as csvfile:
+        reader = csv.reader(csvfile)
+        for i, row in enumerate(reader):
+            if i == 0:
+                continue
+            # print("row:", row)
+            if float(row[1]) > 0.5:  # predict > threshold
+                count += 1
+    return count
 
 
 def list_model_epochs(model_dir, model_type):
@@ -153,6 +208,7 @@ def transform_filetree():
 
 def main():
     # create_csv()
+
     transform_filetree()
     return
     TRAIN = "D:\\DeepLearningData\\semi-conductor-image-classification-first\\data\\train"
