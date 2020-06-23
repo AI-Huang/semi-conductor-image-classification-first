@@ -12,23 +12,22 @@ import numpy as np
 import pandas as pd
 
 import tensorflow as tf
-from tensorflow import keras  # tf2
-from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
-from keras.preprocessing.image import ImageDataGenerator, load_img
-# 等价于 from tf.keras.metrics import AUC
-from keras.metrics import AUC, BinaryAccuracy
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img
+from tensorflow.keras.metrics import AUC, BinaryAccuracy
+
 from model import model_depth, resnet_v2, lr_schedule, binary_focal_loss
 from metrics import AUC0
 
 # Parameters we care
-START_EPOCH = 134
+START_EPOCH = 0
 ALPHA = 0.01
+BATCH_SIZE = 16
 
 # Training parameters
-START_EPOCH = 0
 IF_FAST_RUN = False
-TRAINING_EPOCHS = 50
+TRAINING_EPOCHS = 150
 
 TOTAL_TRAIN = 30000 * 0.8
 TOTAL_VALIDATE = 30000 * 0.2
@@ -56,7 +55,6 @@ def main():
     print("Load Config ...")
     with open('./config/config_origin.json', 'r') as f:
         CONFIG = json.load(f)
-    BATCH_SIZE = CONFIG["BATCH_SIZE"]
     ROOT_PATH = CONFIG["ROOT_PATH"]
     TRAIN_DATA_DIR = os.path.join(ROOT_PATH, CONFIG["TRAIN_DATA_DIR"])
 
@@ -65,6 +63,7 @@ def main():
     version = 2
     depth = model_depth(n, version)
     MODEL_TYPE = 'ResNet%dv%d' % (depth, version)
+    print(f"MODEL_TYPE: {MODEL_TYPE}")
     SAVES_DIR = os.path.join(ROOT_PATH, "models-%s/" % MODEL_TYPE)
     MODEL_CKPT = os.path.join(SAVES_DIR, CONFIG["MODEL_CKPT"])
 
@@ -72,10 +71,9 @@ def main():
         os.mkdir(SAVES_DIR)
     model = resnet_v2(input_shape=INPUT_SHAPE, depth=depth, num_classes=2)
     model.compile(loss=[binary_focal_loss(alpha=ALPHA, gamma=1)],
-                  optimizer=Adam(learning_rate=lr_schedule(TRAINING_EPOCHS)),
+                  optimizer=Adam(learning_rate=lr_schedule(epoch=0)),
                   metrics=METRICS)
     # model.summary()
-    print(MODEL_TYPE)
 
     print("Resume Training...")
     model_ckpt_file = MODEL_CKPT
@@ -91,15 +89,15 @@ def main():
     # Prepare callbacks for model saving and for learning rate adjustment.
     checkpoint = ModelCheckpoint(
         filepath=filepath, monitor="auc_good_0", verbose=1)
-    csv_logger = CSVLogger('training.log.csv', append=True)
+    csv_logger = CSVLogger(".log/training.log.csv", append=True)
     earlystop = EarlyStopping(patience=10)
-    learning_rate_reduction = ReduceLROnPlateau(monitor="auc_good_0",
-                                                patience=2,
-                                                verbose=1,
-                                                factor=0.5,
-                                                min_lr=0.00001)
-    callbacks = [csv_logger, learning_rate_reduction,
-                 checkpoint]  # 不要 earlystop
+    lr_scheduler = LearningRateScheduler(lr_schedule, verbose=1)
+    lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                                   cooldown=0,
+                                   patience=5,
+                                   min_lr=0.5e-6)
+    callbacks = [checkpoint, csv_logger,
+                 lr_reducer, lr_scheduler]  # 不要 earlystop
 
     print('Using real-time data augmentation.')
     print("Training Generator...")
@@ -118,6 +116,7 @@ def main():
         TRAIN_DATA_DIR,
         subset='training',
         target_size=IMAGE_SIZE,
+        classes=["good_0", "bad_1"],
         color_mode="grayscale",
         class_mode='categorical',
         batch_size=BATCH_SIZE,
@@ -133,12 +132,15 @@ def main():
         TRAIN_DATA_DIR,
         subset='validation',
         target_size=IMAGE_SIZE,
+        classes=["good_0", "bad_1"],
         color_mode="grayscale",
         class_mode='categorical',
         batch_size=BATCH_SIZE,
         shuffle=True,
         seed=42
     )
+
+    print("Class_indices: ", validation_generator.class_indices)
 
     print("Fit Model...")
     epochs = 3 if IF_FAST_RUN else TRAINING_EPOCHS

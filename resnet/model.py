@@ -6,13 +6,14 @@
 # @RefLink : https://www.kaggle.com/uysimty/keras-cnn-dog-or-cat-classification
 # @RefLink : https://github.com/fudannlp16/focal-loss/blob/master/focal_loss.py
 
-from __future__ import print_function
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras  # tf2
-from tensorflow.python.keras.metrics import *
 import keras
+# from tensorflow import keras  # tf2
+from tensorflow.python.keras.metrics import *
+from keras import backend as K
+from keras.models import Model
 from keras.layers import Dense, Conv2D, BatchNormalization, Activation
 from keras.layers import AveragePooling2D, Input, Flatten
 from keras.optimizers import Adam
@@ -20,8 +21,7 @@ from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras.callbacks import ReduceLROnPlateau
 from keras.preprocessing.image import ImageDataGenerator
 from keras.regularizers import l2
-from keras import backend as K
-from keras.models import Model
+
 from keras.datasets import cifar10
 
 
@@ -251,7 +251,7 @@ def lr_schedule(epoch):
         lr *= 1e-2
     elif epoch > 80:
         lr *= 1e-1
-    print('Learning rate: ', lr)
+    print(f"Epoch {epoch}, learning rate: {lr}.")
     return lr
 
 
@@ -814,7 +814,7 @@ def main():
         model = resnet_v1(input_shape=input_shape, depth=depth)
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer=Adam(learning_rate=lr_schedule(0)),
+                  optimizer=Adam(learning_rate=lr_schedule(epoch=0)),
                   metrics=['accuracy'])
     model.summary()
     print(model_type)

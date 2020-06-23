@@ -1,0 +1,8 @@
+{
+  "ROOT_PATH": "~/DeepLearningData/semi-conductor-image-classification-first",
+  "MODEL_CKPT": "ResNet56v2.020-auc-0.9648.h5",
+  "MODEL_DIR": "models-ResNet56v2",
+  "TRAIN_DATA_DIR": "data/origin/train/",
+  "TEST_DATA_DIR": "data/origin/test/all_tests",
+  "SAMPLE_DATA_DIR": "data/origin/sample"
+}

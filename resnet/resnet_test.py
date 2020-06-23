@@ -10,17 +10,23 @@ import random
 import pickle
 import numpy as np
 import pandas as pd
-from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
-from keras.preprocessing.image import ImageDataGenerator, load_img
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img
 from sklearn.model_selection import train_test_split
 from resnet import model_depth, resnet_v2, lr_schedule
-from model import auc
+
+from model import model_depth, resnet_v2, lr_schedule, binary_focal_loss
+from metrics import AUC0
+
+# Parameters we care
+START_EPOCH = 0
+ALPHA = 0.01
+BATCH_SIZE = 16
 
 # Training parameters
-START_EPOCH = 0
 IF_FAST_RUN = False
-TRAINING_EPOCHS = 50
+TRAINING_EPOCHS = 150
 
 TOTAL_TRAIN = 30000 * 0.8
 TOTAL_VALIDATE = 30000 * 0.2
@@ -33,37 +39,54 @@ IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS = 1
 INPUT_SHAPE = [IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS]
 
+METRICS = [
+    BinaryAccuracy(name='accuracy'),  # 整体的 accuracy
+    AUC(name='auc_good_0'),  # 实际上是以 good 为 positive 的 AUC
+    AUC0(name='auc_bad_1')  # 以 bad 为 positive 的 AUC
+]
+
 
 def main():
-    """ Use tensorflow version 2 """
+    print("If in eager mode: ", tf.executing_eagerly())
+    print("Use tensorflow version 2.")
     assert tf.__version__[0] == "2"
 
-    """ Load Config """
-    with open('./config/config.json', 'r') as f:
+    print("Load Config ...")
+    with open('./config/config_linux.json', 'r') as f:
         CONFIG = json.load(f)
-    BATCH_SIZE = CONFIG["BATCH_SIZE"]
     ROOT_PATH = CONFIG["ROOT_PATH"]
-    TRAIN_DATA_DIR = CONFIG["TRAIN_DATA_DIR"]
-    TEST_DATA_DIR = CONFIG["TEST_DATA_DIR"]
-    TRAIN_DATA_DIR = os.path.join(ROOT_PATH, TRAIN_DATA_DIR)
-    TEST_DATA_DIR = os.path.join(ROOT_PATH, TEST_DATA_DIR)
-    MODEL_CKPT = CONFIG["MODEL_CKPT"]
+    print(f"ROOT_PATH: {ROOT_PATH}")
+    ROOT_PATH = os.path.expanduser(ROOT_PATH)
+    print(f"ROOT_PATH: {ROOT_PATH}")
+    TRAIN_DATA_DIR = os.path.join(ROOT_PATH, CONFIG["TRAIN_DATA_DIR"])
+    print(f"TRAIN_DATA_DIR: {TRAIN_DATA_DIR}")
+    TEST_DATA_DIR = os.path.join(ROOT_PATH, CONFIG["TEST_DATA_DIR"])
+    print(f"TEST_DATA_DIR: {TEST_DATA_DIR}")
 
-    """ Prepare Model """
-    n = 6  # order of ResNetv2
+    print("Prepare Model")
+    n = 2  # order of ResNetv2, 2 or 6
     version = 2
     depth = model_depth(n, version)
     MODEL_TYPE = 'ResNet%dv%d' % (depth, version)
-    SAVES_DIR = "models-%s/" % MODEL_TYPE
-    SAVES_DIR = os.path.join(ROOT_PATH, SAVES_DIR)
+    print(f"MODEL_TYPE: {MODEL_TYPE}")
+    SAVES_DIR = os.path.join(ROOT_PATH, "models-%s/" % MODEL_TYPE)
     if not os.path.exists(SAVES_DIR):
         os.mkdir(SAVES_DIR)
+    MODEL_CKPT = "ResNet20v2-epoch-092-auc_good_0-0.9545-auc_bad_1-0.9817.h5"
+    model_ckpt_file = os.path.join(SAVES_DIR, MODEL_CKPT)
+    print(f"model_ckpt_file: {model_ckpt_file}")
+
     model = resnet_v2(input_shape=INPUT_SHAPE, depth=depth, num_classes=2)
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(learning_rate=lr_schedule(TRAINING_EPOCHS)),
                   metrics=METRICS)
     # model.summary()
-    print(MODEL_TYPE)
+
+    print("Prepare weights...")
+    model_ckpt_file = MODEL_CKPT
+    if os.path.isfile(model_ckpt_file):
+        print("Model ckpt found! Loading...:\n%s" % model_ckpt_file)
+        model.load_weights(model_ckpt_file)
 
     """ Prepare Testing Data """
     test_filenames = os.listdir(TEST_DATA_DIR)
@@ -86,12 +109,6 @@ def main():
         shuffle=False
     )  # Found 12500 images.
 
-    """ Load Weights """
-    model_ckpt_file = os.path.join(SAVES_DIR, MODEL_CKPT)
-    if os.path.exists(model_ckpt_file):
-        print("Model ckpt found! Loading...:%s" % model_ckpt_file)
-        model.load_weights(model_ckpt_file)
-
     """ Predict """
     import time
     start = time.perf_counter()
@@ -106,18 +123,18 @@ def main():
     np.save(MODEL_TYPE + "-predict.npy", predict)
 
     # predict 第 1 列，是 bad_1 的概率
-    test_df['category'] = predict[:, 0]
+    test_df['category'] = predict[:, 1]
     print("Predict Samples: ")
     print(type(test_df))
     print(test_df.head(10))
 
-    """ 提交submission """
+    print("Prepare submission...")
     submission_df = test_df.copy()
     submission_df['id'] = submission_df['filename'].str.split('.').str[0]
     submission_df['label'] = submission_df['category']
     submission_df.drop(['filename', 'category'], axis=1, inplace=True)
-    submission_df.to_csv('./submissions/submission-%s.csv' %
-                         MODEL_CKPT, index=False)
+    submission_df.to_csv(
+        f"./submissions/submission-{MODEL_CKPT}.csv", index=False)
 
 
 if __name__ == "__main__":
