@@ -21,14 +21,14 @@ from model import model_depth, resnet_v2, lr_schedule, binary_focal_loss
 from metrics import AUC0
 
 # Parameters we care
-START_EPOCH = 0
-ALPHA = 0.01
-BATCH_SIZE = 16
+START_EPOCH = 0  # 已经完成的训练数
+ALPHA = 0.99  # label 1 sample's weight
+BATCH_SIZE = 32  # 16 for Mac, 64, 128 for server
+IF_FAST_RUN = False  # False
+print(f"ALPHA: {ALPHA}")
 
 # Training parameters
-IF_FAST_RUN = False
 TRAINING_EPOCHS = 150
-
 TOTAL_TRAIN = 30000 * 0.8
 TOTAL_VALIDATE = 30000 * 0.2
 
@@ -42,8 +42,8 @@ INPUT_SHAPE = [IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS]
 
 METRICS = [
     BinaryAccuracy(name='accuracy'),  # 整体的 accuracy
-    AUC(name='auc_good_0'),  # 实际上是以 good 为 positive 的 AUC
-    AUC0(name='auc_bad_1')  # 以 bad 为 positive 的 AUC
+    AUC0(name='auc_good_0'),  # 以 good 为 positive 的 AUC
+    AUC(name='auc_bad_1')  # 以 bad 为 positive 的 AUC
 ]
 
 
@@ -74,6 +74,7 @@ def main():
                   optimizer=Adam(learning_rate=lr_schedule(epoch=0)),
                   metrics=METRICS)
     # model.summary()
+    print(MODEL_TYPE)
 
     print("Resume Training...")
     model_ckpt_file = MODEL_CKPT
@@ -81,17 +82,17 @@ def main():
         print("Model ckpt found! Loading...:%s" % model_ckpt_file)
         model.load_weights(model_ckpt_file)
 
-    # Prepare model model saving directory.
-    # model_name = "%s.%03d-val_accuracy-{val_accuracy:.4f}.h5" % (MODEL_TYPE, epoch+START_EPOCH)
+    # Model model saving directory.
     model_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
 
     filepath = os.path.join(SAVES_DIR, model_name)
     # Prepare callbacks for model saving and for learning rate adjustment.
     checkpoint = ModelCheckpoint(
         filepath=filepath, monitor="auc_good_0", verbose=1)
-    csv_logger = CSVLogger(".log/training.log.csv", append=True)
+    csv_logger = CSVLogger("./log/training.log.csv", append=True)
     earlystop = EarlyStopping(patience=10)
-    lr_scheduler = LearningRateScheduler(lr_schedule, verbose=1)
+    lr_scheduler = LearningRateScheduler(
+        lr_schedule, verbose=1)  # verbose>0, 打印 lr_scheduler 的信息
     lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
                                    cooldown=0,
                                    patience=5,
@@ -140,11 +141,9 @@ def main():
         seed=42
     )
 
-    print("Class_indices: ", validation_generator.class_indices)
-
     print("Fit Model...")
     epochs = 3 if IF_FAST_RUN else TRAINING_EPOCHS
-    history = model.fit_generator(
+    history = model.fit(
         train_generator,
         epochs=epochs,
         validation_data=validation_generator,
