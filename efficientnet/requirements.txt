@@ -1,6 +1,6 @@
 numpy
 pandas
-tensorflow==1.15.0 # tensorflow must be 1.x
+tensorflow==1.15.2 # tensorflow must be 1.x
 keras
 scikit-learn
 Pillow
