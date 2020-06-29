@@ -78,7 +78,6 @@ flags.DEFINE_string(
          'augmentation method will be applied applied. See autoaugment.py for  '
          'more details.')
 
-
 flags.DEFINE_integer(
     'randaug_num_layers', default=2,
     help='If RandAug is used, what should the number of layers be.'

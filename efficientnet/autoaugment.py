@@ -24,8 +24,8 @@ from __future__ import print_function
 import inspect
 import math
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib import image as contrib_image
-from tensorflow.contrib import training as contrib_training
+from tensorflow.contrib import image as contrib_image # tf1
+from tensorflow.contrib import training as contrib_training  # tf1
 
 
 # This signifies the max integer that the controller RNN could predict for the

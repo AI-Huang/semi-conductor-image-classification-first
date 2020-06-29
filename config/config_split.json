@@ -1,6 +1,5 @@
 {
   "ROOT_PATH": "D:\\DeepLearningData\\semi-conductor-image-classification-first",
-  "MODEL_CKPT": "ResNet56v2.109-auc-0.9832.h5",
   "TRAIN_DATA_DIR": "data\\split\\train\\",
   "VALIDATION_DATA_DIR": "data\\split\\validation\\",
   "TEST_DATA_DIR": "data\\origin\\test\\all_tests"

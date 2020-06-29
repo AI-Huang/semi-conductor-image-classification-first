@@ -10,13 +10,8 @@ archive*
 
 # Models
 model*/
-
 report/
-
 submissions/
-
-# Config file
-config.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,6 +1,5 @@
 numpy
 pandas
-tensorflow #>=1.15.0
-keras
+tensorflow=2.2.0
 scikit-learn
 Pillow

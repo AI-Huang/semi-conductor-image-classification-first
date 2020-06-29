@@ -38,8 +38,8 @@ from tensorflow.python.estimator import estimator
 FLAGS = flags.FLAGS
 
 # FAKE_DATA_DIR = 'gs://cloud-tpu-test-datasets/fake_imagenet'
-FAKE_DATA_DIR = "D:\\DeepLearningData\\semi-conductor-image-classification-first\\data\\scratch"
-MODEL_DIR = "D:\\DeepLearningData\\semi-conductor-image-classification-first\\models-efficientnet-b0"
+FAKE_DATA_DIR = "/Volumes/MacSDCard/DeepLearningData/semi-conductor-image-classification-first/data/scratch"
+MODEL_DIR = "/Volumes/MacSDCard/DeepLearningData/semi-conductor-image-classification-first/models-efficientnet-b0"
 INPUT_IMAGE_SIZE = 224
 
 flags.DEFINE_bool(
