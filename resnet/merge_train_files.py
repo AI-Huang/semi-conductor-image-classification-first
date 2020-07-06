@@ -14,8 +14,8 @@ GOOD_DATA_DIR = "./data/train/good_0/"
 def main():
     """
     for filename in filenames:
-        category = filename.split('.')[0]
-        if category == 'bad': # bad 1
+        label = filename.split('.')[0]
+        if label == 'bad': # bad 1
             categories.append(1)
         else: # good 0
             categories.append(0)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Feb-03-20 23:44
-# @Author  : Your Name (you@example.org)
+# @Author  : Kelly Hwong (you@example.org)
 # @Link    : http://example.org
 
 import os
@@ -123,7 +123,7 @@ def main():
     np.save(MODEL_TYPE + "-predict.npy", predict)
 
     # predict 第 1 列，是 bad_1 的概率
-    test_df['category'] = predict[:, 1]
+    test_df['label'] = predict[:, 1]
     print("Predict Samples: ")
     print(type(test_df))
     print(test_df.head(10))
@@ -131,8 +131,8 @@ def main():
     print("Prepare submission...")
     submission_df = test_df.copy()
     submission_df['id'] = submission_df['filename'].str.split('.').str[0]
-    submission_df['label'] = submission_df['category']
-    submission_df.drop(['filename', 'category'], axis=1, inplace=True)
+    submission_df['label'] = submission_df['label']
+    submission_df.drop(['filename', 'label'], axis=1, inplace=True)
     submission_df.to_csv(
         f"./submissions/submission-{MODEL_CKPT}.csv", index=False)
 

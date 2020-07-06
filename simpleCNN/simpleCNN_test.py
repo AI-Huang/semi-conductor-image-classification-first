@@ -38,16 +38,16 @@ def main():
     random.shuffle(filenames)
     categories = []
     for filename in filenames:
-        category = filename.split('.')[0]
-        if category == 'dog':
+        label = filename.split('.')[0]
+        if label == 'dog':
             categories.append(1)
         else:
             categories.append(0)
     df = pd.DataFrame({
         'filename': filenames,
-        'category': categories
+        'label': categories
     })
-    df["category"] = df["category"].replace({0: 'cat', 1: 'dog'})
+    df["label"] = df["label"].replace({0: 'cat', 1: 'dog'})
 
     """ 这里用来自动划分 train 集和 val 集 """
     train_df, validate_df = train_test_split(
@@ -70,10 +70,11 @@ def main():
         train_df,
         TRAIN_DATA_DIR,
         x_col='filename',
-        y_col='category',
+        y_col='label',
         target_size=IMAGE_SIZE,
         class_mode='categorical',
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        seed=42
     )
 
     """Prepare Testing Data"""
@@ -121,20 +122,20 @@ def main():
 
     """
     # numpy average max
-    # test_df['category'] = np.argmax(predict, axis=-1)
+    # test_df['label'] = np.argmax(predict, axis=-1)
 
-    # We will convert the predict category back into our generator classes by using train_generator.class_indices. It is the classes that image generator map while converting data into computer vision
+    # We will convert the predict label back into our generator classes by using train_generator.class_indices. It is the classes that image generator map while converting data into computer vision
     label_map = dict((v, k) for k, v in train_generator.class_indices.items())
-    test_df['category'] = test_df['category'].replace(label_map)
+    test_df['label'] = test_df['label'].replace(label_map)
 
     # From our prepare data part. We map data with {1: 'dog', 0: 'cat'}. Now we will map the result back to dog is 1 and cat is 0
-    test_df['category'] = test_df['category'].replace({'dog': 1, 'cat': 0})
-    test_df['category'].value_counts().plot.bar()
+    test_df['label'] = test_df['label'].replace({'dog': 1, 'cat': 0})
+    test_df['label'].value_counts().plot.bar()
 
     plt.show()
     """
 
-    test_df['category'] = predict[:, 1]
+    test_df['label'] = predict[:, 1]
     print("Predict Samples: ")
     print(type(test_df))
     print(test_df.head(10))
@@ -146,11 +147,11 @@ def main():
     plt.figure(figsize=(12, 24))
     for index, row in sample_test.iterrows():
         filename = row['filename']
-        category = row['category']
+        label = row['label']
         img = load_img("../input/test1/test1/"+filename, target_size=IMAGE_SIZE)
         plt.subplot(6, 3, index+1)
         plt.imshow(img)
-        plt.xlabel(filename + '(' + "{}".format(category) + ')')
+        plt.xlabel(filename + '(' + "{}".format(label) + ')')
     plt.tight_layout()
     plt.show()
     """
@@ -158,8 +159,8 @@ def main():
     """Submission"""
     submission_df = test_df.copy()
     submission_df['id'] = submission_df['filename'].str.split('.').str[0]
-    submission_df['label'] = submission_df['category']
-    submission_df.drop(['filename', 'category'], axis=1, inplace=True)
+    submission_df['label'] = submission_df['label']
+    submission_df.drop(['filename', 'label'], axis=1, inplace=True)
     submission_df.to_csv('submission.csv', index=False)
 
 

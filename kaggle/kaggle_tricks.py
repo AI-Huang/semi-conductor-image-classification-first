@@ -14,6 +14,8 @@ ZIP_FILENAME = os.path.basename(DIR) + ".zip"
 ZIP_FILEPATH = os.path.abspath(os.path.join(DIR, os.pardir))
 ZIP_FILEPATH = os.path.join(ZIP_FILEPATH, ZIP_FILENAME)
 
+# trick 1, upload zipped code
+
 
 def zip_file():
     # 把整个文件夹内的文件打包

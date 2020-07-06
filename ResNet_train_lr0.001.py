@@ -134,6 +134,7 @@ def main():
 
     model_ckpt_file = options.ckpt
     if model_ckpt_file != "" and os.path.exists(os.path.join(SAVES_DIR, model_ckpt_file)):
+        model_ckpt_file = os.path.join(SAVES_DIR, model_ckpt_file)
         print("Model ckpt found! Loading...:%s" % model_ckpt_file)
         print("Resume Training...")
         model.load_weights(model_ckpt_file)
@@ -148,12 +149,13 @@ def main():
     earlystop = EarlyStopping(patience=10)
     lr_scheduler = LearningRateScheduler(
         lr_schedule, verbose=1)  # verbose>0, 打印 lr_scheduler 的信息
-    lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
-                                   cooldown=0,
-                                   patience=5,
-                                   min_lr=0.5e-6)
+    lr_reducer = ReduceLROnPlateau(monitor="auc",
+                                   patience=2,
+                                   verbose=1,
+                                   factor=0.5,
+                                   min_lr=0.00001)
     callbacks = [checkpoint, csv_logger,
-                 lr_reducer, lr_scheduler]  # 不要 earlystop
+                 lr_reducer]  # 不要 earlystop, lr_scheduler
 
     print('Using real-time data augmentation.')
     print("Training Generator...")
