@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Feb-01-20 06:51
-# @Author  : Your Name (you@example.org)
+# @Author  : Kan HUANG (kan.huang@connect.ust.hk)
 # @Link    : https://stackoverflow.com/questions/43702323/how-to-load-only-specific-weights-on-keras
+
 
 import os
 import random
@@ -13,7 +14,6 @@ from keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoin
 from keras.preprocessing.image import ImageDataGenerator, load_img
 from sklearn.model_selection import train_test_split
 from resnet import model_depth, resnet_v2, lr_schedule
-from model import auc
 
 # Training parameters
 IF_DATA_AUGMENTATION = True
@@ -22,15 +22,6 @@ IMAGE_WIDTH = IMAGE_HEIGHT = 224
 IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS = 1
 INPUT_SHAPE = [IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS]
-# data path
-TRAIN_DATA_DIR = "./data/train/"
-TEST_DATA_DIR = "./data/test/all_tests"
-
-# constants
-IF_FAST_RUN = True
-EPOCHS_OVER_NIGHT = 50
-BATCH_SIZE = 15
-# BATCH_SIZE = 32  # orig paper trained all networks with batch_size=128
 
 
 class ResNetParam(object):
@@ -42,7 +33,9 @@ class ResNetParam(object):
         self.saves_dir = "./models-%s/" % self.model_type
 
 
-def main():
+def transfer_weights():
+    """transfer_weights, transfer weights for two types of ResNet
+    """
     """ Prepare Model """
     src_param = ResNetParam(n=2, version=2)
     dest_param = ResNetParam(n=6, version=2)
@@ -58,8 +51,7 @@ def main():
     """ Resume Src Model """
     print("Src model type: %s" % src_param.model_type)
     src_model = resnet_v2(input_shape=INPUT_SHAPE,
-                          depth=src_param.depth, num_classes=2)
-    # src_model.summary()
+                          depth=src_param.depth, num_classes=NUM_CLASSES)
 
     """ Loading Src Weights """
     MODEL_CKPT_FILE = "ResNet20v2.020-auc-0.9736.h5"
@@ -80,8 +72,7 @@ def main():
 
     """ Create Dest Model """
     dest_model = resnet_v2(input_shape=INPUT_SHAPE,
-                           depth=dest_param.depth, num_classes=2)
-    # dest_model.summary()
+                           depth=dest_param.depth, num_classes=NUM_CLASSES)
     print("Dest model type: %s" % dest_param.model_type)
     # input不算
     # layer 1-24 to 1-24
@@ -113,6 +104,10 @@ def main():
     print("Saving new model...")
     filename = "%s.h5" % dest_param.model_type
     dest_model.save_weights(filename)
+
+
+def main():
+    transfer_weights()
 
 
 if __name__ == "__main__":

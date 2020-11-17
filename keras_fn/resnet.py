@@ -56,6 +56,15 @@ def lr_schedule(epoch):
     return lr
 
 
+def model_depth(n, version):
+    # Computed depth from supplied model parameter n
+    if version == 1:
+        depth = n * 6 + 2
+    elif version == 2:
+        depth = n * 9 + 2
+    return depth
+
+
 def resnet_layer(inputs,
                  num_filters=16,
                  kernel_size=3,
@@ -269,12 +278,3 @@ def resnet_v2(input_shape, depth, num_classes=10):
     # Instantiate model.
     model = Model(inputs=inputs, outputs=outputs)
     return model
-
-
-def model_depth(n, version):
-    # Computed depth from supplied model parameter n
-    if version == 1:
-        depth = n * 6 + 2
-    elif version == 2:
-        depth = n * 9 + 2
-    return depth

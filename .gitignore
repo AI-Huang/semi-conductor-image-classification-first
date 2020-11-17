@@ -1,15 +1,13 @@
-# log
-log/
+# data
+*.npy
 
-# Data
-data/
-tests/
+# VSCode settings
+.vscode/
 
-# Archive
-archive*
+# training logs
+logs/
 
-# Models
-model*/
+# submissions
 report/
 submissions/
 

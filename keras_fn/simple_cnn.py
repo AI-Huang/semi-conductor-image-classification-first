@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Feb-03-20 23:41
-# @Author  : Your Name (you@example.org)
-# @RefLink    : https://keras.io/examples/cifar10_resnet/
+# @Author  : Kelly Hwong (dianhuangkan@gmail.com)
+# @RefLink : https://keras.io/examples/cifar10_resnet/
 # @RefLink : https://www.kaggle.com/uysimty/keras-cnn-dog-or-cat-classification
 # @RefLink : https://github.com/fudannlp16/focal-loss/blob/master/focal_loss.py
+
 
 import os
 import numpy as np
@@ -115,7 +116,7 @@ def simpleCNN_v2(IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS):
     return model
 
 
-def simpleCNN_v2_auc(input_shape):
+def simpleCNN_v2_AUC(input_shape):
     """Second version of simple CNN,
     added with 2 CNN layers and 1 FC layer.
     """

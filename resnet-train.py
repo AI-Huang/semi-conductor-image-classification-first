@@ -4,6 +4,9 @@
 # @Author  : Kelly Hwong (you@example.org)
 # @Link    : http://example.org
 
+"""Training with ResNet
+TensorFlow version: 2.x
+"""
 import os
 import sys
 import json
@@ -48,19 +51,19 @@ METRICS = [
 
 def cmd_parser():
     parser = OptionParser()
-    # Parameters we care
-    parser.add_option('--start_epoch', type='int', dest='start_epoch',
-                      action='store', default=0, help='start_epoch, i.e., epoches that have been trained, e.g. 80.')  # 已经完成的训练数
-    parser.add_option('--batch_size', type='int', dest='batch_size',
-                      action='store', default=16, help='batch_size, e.g. 16.')  # 16 for Mac, 64, 128 for server
-    parser.add_option('--train_epochs', type='int', dest='train_epochs',
-                      action='store', default=150, help='train_epochs, e.g. 150.')  # training 150 epochs to fit enough
-    # parser.add_option('--if_fast_run', type='choice', dest='if_fast_run',
-    #   action='store', default=0.99, help='') # TODO
-    parser.add_option('--loss', type='string', dest='loss',
-                      action='store', default="bce", help='loss name, e.g., bce or cce.')
     parser.add_option('--exper_name', type='string', dest='exper_name',
                       action='store', default="ResNet56v2", help='exper_name, user named experiment name, e.g., ResNet56v2_BCE.')
+    parser.add_option('--loss', type='string', dest='loss',
+                      action='store', default="bce", help='loss name, e.g., bce or cce.')
+    # Parameters we care
+    parser.add_option('--batch_size', type='int', dest='batch_size',
+                      action='store', default=16, help='batch_size, e.g. 16.')  # 16 for Mac, 64, 128 for server
+    parser.add_option('--epochs', type='int', dest='epochs',
+                      action='store', default=150, help='training epochs, e.g. 150.')  # training 150 epochs to fit enough
+    # parser.add_option('--if_fast_run', type='choice', dest='if_fast_run',
+    #   action='store', default=0.99, help='') # TODO
+    parser.add_option('--start_epoch', type='int', dest='start_epoch',
+                      action='store', default=0, help='start_epoch, i.e., epoches that have been trained, e.g. 80.')  # 已经完成的训练数
     parser.add_option('--config_file', type='string', dest='config_file',
                       action='store', default="./config/config.json", help='config_file path, e.g., ./config/config.json.')
     parser.add_option('--ckpt', type='string', dest='ckpt',
@@ -139,8 +142,8 @@ def main():
         model.load_weights(model_ckpt_file)
 
     # Prepare callbacks for model saving and for learning rate adjustment.
-    model_name = "%s-epoch-{epoch:03d}-auc-{auc:.4f}.h5" % MODEL_TYPE
-    filepath = os.path.join(SAVES_DIR, model_name)
+    ckpt_name = "%s-epoch-{epoch:03d}-auc-{auc:.4f}.h5" % MODEL_TYPE
+    filepath = os.path.join(SAVES_DIR, ckpt_name)
     checkpoint = ModelCheckpoint(
         filepath=filepath, monitor="auc", verbose=1)
     csv_logger = CSVLogger(
@@ -176,7 +179,6 @@ def main():
         color_mode="grayscale",
         class_mode='categorical',
         batch_size=options.batch_size,
-        shuffle=True,
         seed=42
     )
 
@@ -190,7 +192,6 @@ def main():
         color_mode="grayscale",
         class_mode='categorical',
         batch_size=options.batch_size,
-        shuffle=True,
         seed=42
     )
 
@@ -198,9 +199,9 @@ def main():
     print("Val class_indices: ", validation_generator.class_indices)
 
     print("Fit Model...")
-    epochs = 3 if if_fast_run else options.train_epochs
+    epochs = 3 if if_fast_run else options.epochs
     history = model.fit(
-        train_generator,
+        x=train_generator,
         epochs=epochs,
         validation_data=validation_generator,
         validation_steps=TOTAL_VALIDATE//options.batch_size,

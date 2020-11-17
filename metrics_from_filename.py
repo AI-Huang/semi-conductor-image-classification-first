@@ -130,8 +130,9 @@ def main():
     # test_rename1(filename_tests, SAVES_DIR)
     # test_rename3(filename_tests, SAVES_DIR)
 
+    num_epochs = 150
     results = np.zeros(shape=(150, 4))
-    results[:, 0] = np.linspace(0, 149, num=150)
+    results[:, 0] = np.linspace(0, num_epochs-1, num=num_epochs)
     # metrics = ["auc", "val_accuracy", "auc_good_0", "auc_bad_1"]
     metrics = ["val_accuracy", "auc_good_0", "auc_bad_1"]
     for f in filename_tests:

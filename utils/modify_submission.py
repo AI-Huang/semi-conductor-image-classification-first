@@ -8,7 +8,7 @@ import os
 import csv
 
 
-def main():
+def modify_submission():
     with open("submission.csv", "r") as submission_origin:
         f_origin = csv.reader(submission_origin)
         headers = next(f_origin)
@@ -24,6 +24,13 @@ def main():
         f_modified.writerow(headers)
         for row in new_rows:
             f_modified.writerow(row)
+
+
+def main():
+    """
+    docstring
+    """
+    pass
 
 
 if __name__ == "__main__":

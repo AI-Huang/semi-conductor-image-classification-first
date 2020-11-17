@@ -142,9 +142,7 @@ for i, ckpt in enumerate(ckpt_files):
 
     start = time.perf_counter()
     print("Start testing prediction...")
-    pred = model.predict(
-        test_generator, steps=np.ceil(num_samples / BATCH_SIZE),
-        workers=4, verbose=1)
+    pred = model.predict(test_generator, workers=4, verbose=1)
     elapsed = (time.perf_counter() - start)
     print("Prediction time used:", elapsed)
 

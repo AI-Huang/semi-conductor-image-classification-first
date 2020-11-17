@@ -44,7 +44,9 @@ def calc_PCA():
     plt.show()
 
 
-def plot_PCA():
+def main():
+    from utils.visualization import plot_PCA
+
     with open('./config/config_origin.json', 'r') as f:
         CONFIG = json.load(f)
     ROOT_PATH = CONFIG["ROOT_PATH"]
@@ -56,21 +58,7 @@ def plot_PCA():
         FEATURE_DIR, "components_train_bad.npy"))
     components_train_good = np.load(os.path.join(
         FEATURE_DIR, "components_train_good.npy"))
-
-    import matplotlib.pyplot as plt
-    plt.scatter(components_train_bad[:, 0],
-                components_train_bad[:, 1], color="r", label="bad", s=0.5)
-    plt.scatter(components_train_good[:, 0],
-                components_train_good[:, 1], color="g", label="good", s=0.5)
-    plt.xlabel("Principal Component 1")
-    plt.ylabel("Principal Component 2")
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-
-def main():
-    plot_PCA()
+    plot_PCA(components_train_bad, components_train_good)
 
 
 if __name__ == "__main__":

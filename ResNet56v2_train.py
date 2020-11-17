@@ -18,7 +18,7 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img
 from tensorflow.keras.metrics import Recall, Precision, TruePositives, FalsePositives, TrueNegatives, FalseNegatives, BinaryAccuracy, AUC
 from tensorflow.keras.losses import BinaryCrossentropy
-from model import model_depth, resnet_v2, lr_schedule
+from resnet import model_depth, resnet_v2, lr_schedule
 
 # Parameters we care
 START_EPOCH = 0  # 已经完成的训练数
@@ -93,10 +93,10 @@ print(MODEL_TYPE)
 # model.load_weights(model_ckpt_file)
 
 # Model model saving directory.
-# model_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
-model_name = "%s-epoch-{epoch:03d}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
+# ckpt_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
+ckpt_name = "%s-epoch-{epoch:03d}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
 
-filepath = os.path.join(SAVES_DIR, model_name)
+filepath = os.path.join(SAVES_DIR, ckpt_name)
 # Prepare callbacks for model saving and for learning rate adjustment.
 checkpoint = ModelCheckpoint(
     filepath=filepath, monitor="auc_bad_1", verbose=1)
