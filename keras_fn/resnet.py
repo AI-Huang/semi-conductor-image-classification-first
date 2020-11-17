@@ -1,12 +1,16 @@
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Feb-03-20 23:41
-# @Author  : Your Name (you@example.org)
-# @Link    : https://keras.io/examples/cifar10_resnet/
+# @Update  : Sep-08-20 11:15
+# @Author  : Kelly Hwong (you@example.org)
+# @RefLink : https://keras.io/examples/cifar10_resnet/
 
 import os
 import numpy as np
+import tensorflow as tf
 from tensorflow import keras  # if we want tf2 Keras, not standalone Keras
 # import keras
 from tensorflow.keras.layers import Dense, Conv2D, BatchNormalization, Activation
@@ -37,22 +41,23 @@ def lr_schedule(epoch):
     Called automatically every epoch as part of callbacks during training.
 
     # Arguments
-        epoch (int): The number of epochs
+        epoch (int): The number of epochs that model has been trained for
 
     # Returns
         lr (float32): learning rate
     """
-    epoch += 1
-    lr = 1e-3
-    if epoch > 180:
-        lr *= 0.5e-3
-    elif epoch > 160:
-        lr *= 1e-3
-    elif epoch > 120:
+    lr = 1e-3  # base learning rate
+    if 80 <= epoch < 120:
+        lr *= 1e-1  # reduce factor
+    elif 120 <= epoch < 160:
         lr *= 1e-2
-    elif epoch > 80:
-        lr *= 1e-1
-    print(f"Epoch number counting from 1: {epoch}; learning rate: {lr}.")
+    elif 160 <= epoch < 180:
+        lr *= 1e-3
+    elif epoch >= 180:
+        lr *= 0.5e-3
+    print(
+        f"Model has been trained for {epoch} epoch(s); learning rate for next epoch: {lr}.")
+    tf.summary.scalar('learning rate', data=lr, step=epoch)
     return lr
 
 

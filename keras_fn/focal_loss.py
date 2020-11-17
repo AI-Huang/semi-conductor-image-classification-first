@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Jul-05-20 12:21
-# @Author  : Your Name (you@example.org)
-# @Link    : http://example.org
+# @Author  : Kelly Hwong (dianhuangkan@gmail.com)
+# @RefLink : https://github.com/fudannlp16/focal-loss/blob/master/focal_loss.py
 
 # requirements
 # tensorflow==2.2.0
