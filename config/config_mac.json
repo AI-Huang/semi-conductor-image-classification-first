@@ -1,5 +1,0 @@
-{
-  "ROOT_PATH": "/Volumes/MacSDCard/DeepLearningData/semi-conductor-image-classification-first",
-  "TRAIN_DATA_DIR": "data/origin/train/",
-  "TEST_DATA_DIR": "data/origin/test/all_tests"
-}

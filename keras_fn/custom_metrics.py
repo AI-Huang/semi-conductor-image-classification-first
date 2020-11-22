@@ -281,7 +281,7 @@ class Metric(Layer):
     ### End: For use by subclasses ###
 
 
-@keras_export('keras.metrics.AUC0')
+# @keras_export('keras.metrics.AUC0')
 class AUC0(Metric):
     """AUC0 based on that 0 class is the "positive" class
     """

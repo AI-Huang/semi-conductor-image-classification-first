@@ -4,9 +4,6 @@
 # @Author  : Kelly Hwong (you@example.org)
 # @Link    : http://example.org
 
-"""Training with ResNet
-TensorFlow version: 2.x
-"""
 import os
 import sys
 import json
@@ -51,19 +48,19 @@ METRICS = [
 
 def cmd_parser():
     parser = OptionParser()
-    parser.add_option('--exper_name', type='string', dest='exper_name',
-                      action='store', default="ResNet56v2", help='exper_name, user named experiment name, e.g., ResNet56v2_BCE.')
-    parser.add_option('--loss', type='string', dest='loss',
-                      action='store', default="bce", help='loss name, e.g., bce or cce.')
     # Parameters we care
-    parser.add_option('--batch_size', type='int', dest='batch_size',
-                      action='store', default=16, help='batch_size, e.g. 16.')  # 16 for Mac, 64, 128 for server
-    parser.add_option('--epochs', type='int', dest='epochs',
-                      action='store', default=150, help='training epochs, e.g. 150.')  # training 150 epochs to fit enough
-    # parser.add_option('--if_fast_run', type='choice', dest='if_fast_run',
-    #   action='store', default=0.99, help='') # TODO
     parser.add_option('--start_epoch', type='int', dest='start_epoch',
                       action='store', default=0, help='start_epoch, i.e., epoches that have been trained, e.g. 80.')  # 已经完成的训练数
+    parser.add_option('--batch_size', type='int', dest='batch_size',
+                      action='store', default=16, help='batch_size, e.g. 16.')  # 16 for Mac, 64, 128 for server
+    parser.add_option('--train_epochs', type='int', dest='train_epochs',
+                      action='store', default=150, help='train_epochs, e.g. 150.')  # training 150 epochs to fit enough
+    # parser.add_option('--if_fast_run', type='choice', dest='if_fast_run',
+    #   action='store', default=0.99, help='') # TODO
+    parser.add_option('--loss', type='string', dest='loss',
+                      action='store', default="bce", help='loss name, e.g., bce or cce.')
+    parser.add_option('--exper_name', type='string', dest='exper_name',
+                      action='store', default="ResNet56v2", help='exper_name, user named experiment name, e.g., ResNet56v2_BCE.')
     parser.add_option('--config_file', type='string', dest='config_file',
                       action='store', default="./config/config.json", help='config_file path, e.g., ./config/config.json.')
     parser.add_option('--ckpt', type='string', dest='ckpt',
@@ -137,13 +134,14 @@ def main():
 
     model_ckpt_file = options.ckpt
     if model_ckpt_file != "" and os.path.exists(os.path.join(SAVES_DIR, model_ckpt_file)):
+        model_ckpt_file = os.path.join(SAVES_DIR, model_ckpt_file)
         print("Model ckpt found! Loading...:%s" % model_ckpt_file)
         print("Resume Training...")
         model.load_weights(model_ckpt_file)
 
     # Prepare callbacks for model saving and for learning rate adjustment.
-    ckpt_name = "%s-epoch-{epoch:03d}-auc-{auc:.4f}.h5" % MODEL_TYPE
-    filepath = os.path.join(SAVES_DIR, ckpt_name)
+    model_name = "%s-epoch-{epoch:03d}-auc-{auc:.4f}.h5" % MODEL_TYPE
+    filepath = os.path.join(SAVES_DIR, model_name)
     checkpoint = ModelCheckpoint(
         filepath=filepath, monitor="auc", verbose=1)
     csv_logger = CSVLogger(
@@ -151,57 +149,21 @@ def main():
     earlystop = EarlyStopping(patience=10)
     lr_scheduler = LearningRateScheduler(
         lr_schedule, verbose=1)  # verbose>0, 打印 lr_scheduler 的信息
-    lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
-                                   cooldown=0,
-                                   patience=5,
-                                   min_lr=0.5e-6)
+    lr_reducer = ReduceLROnPlateau(monitor="auc",
+                                   patience=2,
+                                   verbose=1,
+                                   factor=0.5,
+                                   min_lr=0.00001)
     callbacks = [checkpoint, csv_logger,
-                 lr_reducer, lr_scheduler]  # 不要 earlystop
-
-    print('Using real-time data augmentation.')
-    print("Training Generator...")
-    train_datagen = ImageDataGenerator(
-        validation_split=0.2,
-        rescale=1./255,
-        rotation_range=15,
-        shear_range=0.1,
-        zoom_range=0.2,
-        horizontal_flip=True,
-        width_shift_range=0.1,
-        height_shift_range=0.1
-    )
-
-    train_generator = train_datagen.flow_from_directory(
-        TRAIN_DATA_DIR,
-        subset='training',
-        target_size=IMAGE_SIZE,
-        classes=classes,
-        color_mode="grayscale",
-        class_mode='categorical',
-        batch_size=options.batch_size,
-        seed=42
-    )
-
-    print("Validation Generator...")
-    valid_datagen = ImageDataGenerator(validation_split=0.2, rescale=1./255)
-    validation_generator = valid_datagen.flow_from_directory(
-        TRAIN_DATA_DIR,
-        subset='validation',
-        target_size=IMAGE_SIZE,
-        classes=classes,
-        color_mode="grayscale",
-        class_mode='categorical',
-        batch_size=options.batch_size,
-        seed=42
-    )
+                 lr_reducer]  # 不要 earlystop, lr_scheduler
 
     print("Train class_indices: ", train_generator.class_indices)
     print("Val class_indices: ", validation_generator.class_indices)
 
     print("Fit Model...")
-    epochs = 3 if if_fast_run else options.epochs
+    epochs = 3 if if_fast_run else options.train_epochs
     history = model.fit(
-        x=train_generator,
+        train_generator,
         epochs=epochs,
         validation_data=validation_generator,
         validation_steps=TOTAL_VALIDATE//options.batch_size,

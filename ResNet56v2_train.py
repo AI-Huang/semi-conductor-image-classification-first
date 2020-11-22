@@ -149,8 +149,7 @@ validation_generator = valid_datagen.flow_from_directory(
     color_mode="grayscale",
     class_mode='categorical',
     batch_size=BATCH_SIZE,
-    shuffle=True,
-    seed=42
+    shuffle=False,
 )
 
 print("Train class_indices: ", train_generator.class_indices)
