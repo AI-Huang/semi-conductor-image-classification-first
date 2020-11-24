@@ -12,13 +12,17 @@ import numpy as np
 import pandas as pd
 
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img
-from tensorflow.keras.metrics import Recall, Precision, TruePositives, FalsePositives, TrueNegatives, FalseNegatives, BinaryAccuracy, AUC
+from tensorflow.keras.metrics import AUC, BinaryAccuracy, TruePositives, FalsePositives, TrueNegatives, FalseNegatives
 from tensorflow.keras.losses import BinaryCrossentropy
-from resnet import model_depth, resnet_v2, lr_schedule
+
+from model import model_depth, resnet_v2, lr_schedule
+from binary_focal_loss
+
+# tf.debugging.set_log_device_placement(True)
+# tf.enable_eager_execution()
 
 # Parameters we care
 START_EPOCH = 0  # 已经完成的训练数
@@ -41,8 +45,6 @@ IMAGE_CHANNELS = 1
 INPUT_SHAPE = [IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS]
 
 METRICS = [
-    Recall(name='recall'),
-    Precision(name='precision'),
     TruePositives(name='tp'),  # thresholds=0.5
     FalsePositives(name='fp'),
     TrueNegatives(name='tn'),
@@ -50,7 +52,6 @@ METRICS = [
     BinaryAccuracy(name='accuracy'),
     #     AUC0(name='auc_good_0'),  # 以 good 为 positive 的 AUC
     AUC(name='auc_bad_1')  # 以 bad 为 positive 的 AUC
-    #     AUC(name='auc_good_0')  # 以 good 为 positive 的 AUC
 ]
 
 print("If in eager mode: ", tf.executing_eagerly())
@@ -58,7 +59,7 @@ print(f"Use tensorflow version: {tf.__version__}.")
 assert tf.__version__[0] == "2"
 
 print("Load Config ...")
-with open('./config.json', 'r') as f:  # by default
+with open('./config/config_origin.json', 'r') as f:
     CONFIG = json.load(f)
 ROOT_PATH = CONFIG["ROOT_PATH"]
 print(f"ROOT_PATH: {ROOT_PATH}")
@@ -80,23 +81,23 @@ MODEL_CKPT = os.path.join(
 print(f"MODEL_CKPT: {MODEL_CKPT}")
 
 model = resnet_v2(input_shape=INPUT_SHAPE, depth=depth, num_classes=2)
-model.compile(loss=BinaryCrossentropy(),
+model.compile(loss=[binary_focal_loss(alpha=ALPHA, gamma=GAMMA)],  # BinaryCrossentropy()
               optimizer=Adam(learning_rate=lr_schedule(epoch=0)),
               metrics=METRICS)
 # model.summary()
 print(MODEL_TYPE)
 
-# print("Resume Training...")
-# model_ckpt_file = MODEL_CKPT
-# assert os.path.isfile(model_ckpt_file)
-# print("Model ckpt found! Loading...:%s" % model_ckpt_file)
-# model.load_weights(model_ckpt_file)
+print("Resume Training...")
+model_ckpt_file = MODEL_CKPT
+if os.path.isfile(model_ckpt_file):
+    print("Model ckpt found! Loading...:%s" % model_ckpt_file)
+    model.load_weights(model_ckpt_file)
 
 # Model model saving directory.
-# ckpt_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
-ckpt_name = "%s-epoch-{epoch:03d}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
+# model_name = "%s-epoch-{epoch:03d}-auc_good_0-{auc_good_0:.4f}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
+model_name = "%s-epoch-{epoch:03d}-auc_bad_1-{auc_bad_1:.4f}.h5" % MODEL_TYPE
 
-filepath = os.path.join(SAVES_DIR, ckpt_name)
+filepath = os.path.join(SAVES_DIR, model_name)
 # Prepare callbacks for model saving and for learning rate adjustment.
 checkpoint = ModelCheckpoint(
     filepath=filepath, monitor="auc_bad_1", verbose=1)
@@ -149,7 +150,8 @@ validation_generator = valid_datagen.flow_from_directory(
     color_mode="grayscale",
     class_mode='categorical',
     batch_size=BATCH_SIZE,
-    shuffle=False,
+    shuffle=True,
+    seed=42
 )
 
 print("Train class_indices: ", train_generator.class_indices)
@@ -161,18 +163,20 @@ print("Fit Model...")
 # tf.config.experimental.set_visible_devices(gpus[3], 'GPU')
 
 epochs = 3 if IF_FAST_RUN else TRAINING_EPOCHS
-
-# class_weight = {0: 1.0/101, 1: 100.0/101} # class_weight
-# print("class_weight:", class_weight)
-
 with tf.device('/device:GPU:2'):
     history = model.fit(
         train_generator,
         epochs=epochs,
-        #         class_weight=class_weight,  # 添加 class_weight
         validation_data=validation_generator,
         validation_steps=TOTAL_VALIDATE//BATCH_SIZE,
         steps_per_epoch=TOTAL_TRAIN//BATCH_SIZE,
         callbacks=callbacks,
         initial_epoch=START_EPOCH
     )
+
+print("Save Model...")
+model.save_weights("model-" + MODEL_TYPE + ".h5")
+
+print("Save History...")
+with open('./history', 'wb') as pickle_file:
+    pickle.dump(history.history, pickle_file)

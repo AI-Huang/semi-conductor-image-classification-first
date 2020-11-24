@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Date    : Feb-03-20 23:44
-# @Update  : Nov-19-20 15:34
 # @Author  : Kelly Hwong (you@example.org)
 # @Link    : http://example.org
-"""Training with ResNet
-Typical usage:
-    python resnet_train.py
-Environments:
-    TensorFlow version: 2.x
-"""
 
 import os
 import argparse
@@ -19,8 +12,7 @@ import tensorflow as tf
 from keras_fn.resnet import model_depth, resnet_v2, lr_schedule
 import keras_fn.confusion_matrix_v2_1_0 as confusion_matrix
 from keras_fn import model_config
-from utils.dir_utils import makedir_exist_ok
-from utils.data_utils import data_generators
+from utils.data_utils import get_test_generator
 
 
 def cmd_parser():
@@ -72,8 +64,6 @@ def main():
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.set_visible_devices(physical_devices[args.gpu:], 'GPU')
 
-    if_fast_run = False
-
     classes = ["good_0", "bad_1"]
     if args.positive_class == "good_0":
         classes = ["bad_1", "good_0"]
@@ -96,8 +86,6 @@ def main():
     subfix = os.path.join(model_type, date_time)
     ckpt_dir = os.path.expanduser(os.path.join(prefix, "ckpts", subfix))
     log_dir = os.path.expanduser(os.path.join(prefix, "logs", subfix))
-    makedir_exist_ok(ckpt_dir)
-    makedir_exist_ok(log_dir)
 
     # Input parameters
     SIDE_LENGTH = args.side_length  # default 224
@@ -108,11 +96,8 @@ def main():
     num_classes = 2
 
     # Data loaders
-    train_generator, validation_generator = data_generators(
+    test_generator, test_df = get_test_generator(
         data_dir, target_size=image_size, batch_size=args.batch_size)
-
-    print("Train class_indices: ", train_generator.class_indices)
-    print("Val class_indices: ", validation_generator.class_indices)
 
     # Create model
     model = resnet_v2(input_shape=input_shape,
@@ -139,34 +124,37 @@ def main():
                   optimizer=optimizer,
                   metrics=metrics)
 
-    # Define callbacks
-    from tensorflow.keras.callbacks import CSVLogger, LearningRateScheduler, TensorBoard, ModelCheckpoint
+    # Load model checkpoint to be tested
+    model_ckpt_file = model_type
+    assert os.path.isfile(model_ckpt_file)
+    print("Model ckpt found! Loading...:\n%s" % model_ckpt_file)
+    model.load_weights(model_ckpt_file)
 
-    ckpt_name = "%s-epoch-{epoch:03d}-auc-{auc:.4f}.h5" % model_type
-    filepath = os.path.join(ckpt_dir, ckpt_name)
-    checkpoint = ModelCheckpoint(
-        filepath=filepath, monitor="auc", verbose=1)
-
-    csv_logger = CSVLogger(os.path.join(
-        log_dir, "training.log.csv"), append=True)
-
-    lr_scheduler = LearningRateScheduler(
-        lr_schedule, verbose=1)
-
-    tensorboard_callback = TensorBoard(
-        log_dir, histogram_freq=1, update_freq="batch")
-
-    callbacks = [csv_logger, lr_scheduler, checkpoint, tensorboard_callback]
-
-    # Fit model
-    epochs = 3 if if_fast_run else args.epochs
-    history = model.fit(
-        x=train_generator,
-        epochs=epochs,
-        validation_data=validation_generator,
-        callbacks=callbacks,
-        initial_epoch=args.start_epoch
+    # Start prediction
+    import time
+    start = time.perf_counter()
+    print("Start testing...")
+    predict = model.predict(
+        test_generator,
+        workers=4, verbose=1
     )
+    elapsed = (time.perf_counter() - start)
+    print("Prediction time used:", elapsed)
+
+    np.save(os.path.join("predicts", model_type+"-predict.npy"), predict)
+
+    # Prepare submission
+    # predict 第 1 列，是 bad_1 的概率
+    test_df['label'] = predict[:, classes.index("bad_1")]
+    print("Predict Samples: ")
+    print(type(test_df))
+    print(test_df.head(10))
+    submission_df = test_df.copy()
+    submission_df['id'] = submission_df['filename'].str.split('.').str[0]
+    submission_df.drop(['filename'], axis=1, inplace=True)
+    submission_df = submission_df[list(("id", "label"))]
+    submission_df.to_csv(
+        f"./submissions/submission-{model_type}-{date_time}.csv", index=False)
 
 
 if __name__ == "__main__":

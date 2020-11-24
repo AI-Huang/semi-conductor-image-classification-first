@@ -1,68 +1,84 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# @Date    : Jul-05-20 12:21
-# @Author  : Kelly Hwong (dianhuangkan@gmail.com)
-# @RefLink : https://github.com/fudannlp16/focal-loss/blob/master/focal_loss.py
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Losses used for detection models."""
 
-# requirements
-# tensorflow==2.2.0
-# keras: 2.3.0-tf
-
-import os
 import tensorflow as tf
 
 
-def binary_focal_loss(gamma=2, alpha=0.25):
-    """
-    Binary form of focal loss.
-    适用于二分类问题的focal loss
+class FocalLoss(tf.keras.losses.Loss):
+    """Implements a Focal loss for classification problems.
 
-    focal_loss(p_t) = -alpha_t * (1-p_t)**gamma * log(p_t)
-        where p = sigmoid(x), p_t = p or 1-p depending on if the label is 1 or 0, respectively.
-    References:
-        https://arxiv.org/pdf/1708.02002.pdf
-    Usage:
-     model.compile(loss=[binary_focal_loss(alpha=.25, gamma=2)], metrics=["accuracy"], optimizer=adam)
+    Reference:
+      [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002).
     """
-    alpha = tf.constant(alpha, dtype=tf.float32)
-    gamma = tf.constant(gamma, dtype=tf.float32)
 
-    def binary_focal_loss_fixed(y_true, y_pred):
+    def __init__(self,
+                 alpha,
+                 gamma,
+                 reduction=tf.keras.losses.Reduction.AUTO,
+                 name=None):
+        """Initializes `FocalLoss`.
+
+        Arguments:
+          alpha: The `alpha` weight factor for binary class imbalance.
+          gamma: The `gamma` focusing parameter to re-weight loss.
+          reduction: (Optional) Type of `tf.keras.losses.Reduction` to apply to
+            loss. Default value is `AUTO`. `AUTO` indicates that the reduction
+            option will be determined by the usage context. For almost all cases
+            this defaults to `SUM_OVER_BATCH_SIZE`. When used with
+            `tf.distribute.Strategy`, outside of built-in training loops such as
+            `tf.keras` `compile` and `fit`, using `AUTO` or `SUM_OVER_BATCH_SIZE`
+            will raise an error. Please see this custom training [tutorial](
+              https://www.tensorflow.org/tutorials/distribute/custom_training) for
+                more details.
+          name: Optional name for the op. Defaults to 'retinanet_class_loss'.
         """
-        y_true shape need be (None,1)
-        y_pred need be compute after sigmoid
+        self._alpha = alpha
+        self._gamma = gamma
+        super(FocalLoss, self).__init__(reduction=reduction, name=name)
+
+    def call(self, y_true, y_pred):
+        """Invokes the `FocalLoss`.
+
+        Arguments:
+          y_true: A tensor of size [batch, num_anchors, num_classes]
+          y_pred: A tensor of size [batch, num_anchors, num_classes]
+
+        Returns:
+          Summed loss float `Tensor`.
         """
-        y_true = tf.cast(y_true, tf.float32)
-        alpha_t = y_true*alpha + (K.ones_like(y_true)-y_true)*(1-alpha)
+        with tf.name_scope('focal_loss'):
+            y_true = tf.cast(y_true, dtype=tf.float32)
+            y_pred = tf.cast(y_pred, dtype=tf.float32)
+            positive_label_mask = tf.equal(y_true, 1.0)
+            cross_entropy = (
+                tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred))
+            probs = tf.sigmoid(y_pred)
+            probs_gt = tf.where(positive_label_mask, probs, 1.0 - probs)
+            # With small gamma, the implementation could produce NaN during back prop.
+            modulator = tf.pow(1.0 - probs_gt, self._gamma)
+            loss = modulator * cross_entropy
+            weighted_loss = tf.where(positive_label_mask, self._alpha * loss,
+                                     (1.0 - self._alpha) * loss)
 
-        p_t = y_true*y_pred + (K.ones_like(y_true)-y_true) * \
-            (K.ones_like(y_true)-y_pred) + K.epsilon()
-        focal_loss = - alpha_t * \
-            K.pow((K.ones_like(y_true)-p_t), gamma) * K.log(p_t)
-        return K.mean(focal_loss)
-    return binary_focal_loss_fixed
+        return weighted_loss
 
-
-def focal_loss_softmax(labels, logits, gamma=2):
-    """
-    Computer focal loss for multi classification
-    Args:
-      labels: A int32 tensor of shape [batch_size].
-      logits: A float32 tensor of shape [batch_size,num_classes].
-      gamma: A scalar for focal loss gamma hyper-parameter.
-    Returns:
-      A tensor of the same shape as `lables`
-    """
-    y_pred = tf.nn.softmax(logits, dim=-1)  # [batch_size,num_classes]
-    labels = tf.one_hot(labels, depth=y_pred.shape[1])
-    L = -labels*((1-y_pred)**gamma)*tf.log(y_pred)
-    L = tf.reduce_sum(L, axis=1)
-    return L
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()
+    def get_config(self):
+        config = {
+            'alpha': self._alpha,
+            'gamma': self._gamma,
+        }
+        base_config = super(FocalLoss, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

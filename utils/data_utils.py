@@ -5,18 +5,20 @@
 # @Link    : http://example.org
 
 import os
+import pandas as pd
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # Data loader for semi-conductor dataset
 
 
-def data_generators(data_dir, target_size, batch_size=32, classes=["good_0", "bad_1"], seed=42):
+def data_generators(data_dir, target_size, batch_size=32, classes=["good_0", "bad_1"], rescale=1./255, validation_split=0.2, shuffle=True, seed=42):
     """data_generators
     Inputs:
         data_dir:
         target_size:
         batch_size: train generator and validation generator's batch_size, default 32.
-        classes: default '["good_0", "bad_1"]'
+        classes: default '["good_0", "bad_1"]'.
+        shuffle: Whether to shuffle the dataset default True.
         seed: train generator's random seed, default 42.
     Return:
         train_generator:
@@ -29,8 +31,8 @@ def data_generators(data_dir, target_size, batch_size=32, classes=["good_0", "ba
     # Training Generator
     # Using real-time data augmentation
     train_datagen = ImageDataGenerator(
-        validation_split=0.2,
-        rescale=1./255,
+        validation_split=validation_split,
+        rescale=rescale,
         rotation_range=15,
         shear_range=0.1,
         zoom_range=0.2,
@@ -47,12 +49,13 @@ def data_generators(data_dir, target_size, batch_size=32, classes=["good_0", "ba
         classes=classes,
         class_mode="categorical",
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=shuffle,
         seed=seed
     )
 
     # Validation Generator
-    valid_datagen = ImageDataGenerator(validation_split=0.2)
+    valid_datagen = ImageDataGenerator(
+        validation_split=validation_split, rescale=rescale)
     validation_generator = valid_datagen.flow_from_directory(
         os.path.join(data_dir, "train"),
         subset='validation',
@@ -77,8 +80,10 @@ def get_test_generator(data_dir, target_size, batch_size):
         test_generator:
         test_df:
     """
+    test_directory = os.path.join(data_dir, "test", "all_tests")
+
     # Prepare DataFrame
-    test_filenames = os.listdir(os.path.join(data_dir, "test"))
+    test_filenames = os.listdir(test_directory)
     test_df = pd.DataFrame({
         'filename': test_filenames
     })
@@ -88,14 +93,14 @@ def get_test_generator(data_dir, target_size, batch_size):
     test_gen = ImageDataGenerator(rescale=1./255)
     test_generator = test_gen.flow_from_dataframe(
         test_df,
-        directory=os.path.join(data_dir, "test"),
+        test_directory,
         x_col='filename',
         y_col=None,
         class_mode=None,
         target_size=target_size,
-        color_mode="rgb",
+        color_mode="grayscale",
         batch_size=batch_size,
         shuffle=False
-    )  # Found 12500 images.
+    )
 
     return test_generator, test_df
