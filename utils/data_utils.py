@@ -64,7 +64,8 @@ def data_generators(data_dir, target_size, batch_size=32, classes=["good_0", "ba
         classes=classes,
         class_mode="categorical",
         batch_size=batch_size,
-        shuffle=False
+        shuffle=shuffle,
+        seed=seed
     )
 
     return train_generator, validation_generator

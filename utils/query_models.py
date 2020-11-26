@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # @Date    : Feb-11-20 14:18
 # @Author  : Kelly Hwong (dianhuangkan@gmail.com)
-# @Link    : http://example.org
 # @Link    : https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column
 
 import os

@@ -55,11 +55,12 @@ def cmd_parser():
                         action='store', default=0, help='start_epoch, i.e., epoches that have been trained, e.g. 80.')  # 已经完成的训练数
     parser.add_argument('--ckpt', type=str, dest='ckpt',
                         action='store', default="", help='ckpt, model ckpt file.')
-    parser.add_argument('--positive_class', type=str, dest='positive_class',
-                        action='store', default="bad_1", help='positive_class, the class regarded as positive samples, e.g. good_0 or bad_1.')
 
+    # Focal loss paramaters
     parser.add_argument('--alpha', type=float, dest='alpha',
-                        action='store', default=0.99, help='alpha for focal loss if this loss is used.')
+                        action='store', default=0.75, help='alpha pamameter for focal loss if it is used.')
+    parser.add_argument('--gamma', type=float, dest='gamma',
+                        action='store', default=2, help='gamma pamameter for focal loss if it is used.')
 
     args = parser.parse_args()
 
@@ -73,10 +74,6 @@ def main():
     tf.config.set_visible_devices(physical_devices[args.gpu:], 'GPU')
 
     if_fast_run = False
-
-    classes = ["good_0", "bad_1"]
-    if args.positive_class == "good_0":
-        classes = ["bad_1", "good_0"]
 
     # Data path
     competition_name = "semi-conductor-image-classification-first"
@@ -108,8 +105,9 @@ def main():
     num_classes = 2
 
     # Data loaders
+    classes = ["good_0", "bad_1"]
     train_generator, validation_generator = data_generators(
-        data_dir, target_size=image_size, batch_size=args.batch_size)
+        data_dir, target_size=image_size, batch_size=args.batch_size, classes=classes)
 
     print("Train class_indices: ", train_generator.class_indices)
     print("Val class_indices: ", validation_generator.class_indices)
@@ -123,12 +121,12 @@ def main():
     if loss == "bce":
         from tensorflow.keras.losses import BinaryCrossentropy
         loss = BinaryCrossentropy()
-    elif loss == "cce":
-        from tensorflow.keras.losses import CategoricalCrossentropy
-        loss = CategoricalCrossentropy()
+    elif loss == "focal":
+        from keras_fn.focal_loss import BinaryFocalLoss
+        loss = BinaryFocalLoss(alpha=args.alpha, gamma=args.gamma)
     else:
         raise ValueError(
-            "Input error for args.loss, please type 'bce' or 'cce'")
+            """loss parameter must be one of ["bce", "focal"].""")
 
     from tensorflow.keras.optimizers import Adam
     optimizer = Adam(learning_rate=lr_schedule(args.start_epoch))
