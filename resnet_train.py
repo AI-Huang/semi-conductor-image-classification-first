@@ -28,9 +28,6 @@ def cmd_parser():
     """
     parser = argparse.ArgumentParser()
 
-    # Device
-    parser.add_argument('--gpu', type=int, dest='gpu',
-                        action='store', default=0, help='gpu, the number of the gpu used for experiment.')
     # Input parameters
     parser.add_argument('--side_length', type=int, dest='side_length',
                         action='store', default=224, help='side_length, the length of image width and height to be cast to.')
@@ -49,19 +46,21 @@ def cmd_parser():
 
     # Loss
     parser.add_argument('--loss', type=str, dest='loss',
-                        action='store', default="bce", help="loss name, one of  'bce' and 'cce'.")
+                        action='store', default="bce", help="""loss name, one of ["bce", "focal"].""")
 
     parser.add_argument('--start_epoch', type=int, dest='start_epoch',
                         action='store', default=0, help='start_epoch, i.e., epoches that have been trained, e.g. 80.')  # 已经完成的训练数
     parser.add_argument('--ckpt', type=str, dest='ckpt',
                         action='store', default="", help='ckpt, model ckpt file.')
-
     # Focal loss paramaters
     parser.add_argument('--alpha', type=float, dest='alpha',
-                        action='store', default=0.75, help='alpha pamameter for focal loss if it is used.')
+                        action='store', default=0.25, help='alpha pamameter for focal loss if it is used.')
     parser.add_argument('--gamma', type=float, dest='gamma',
                         action='store', default=2, help='gamma pamameter for focal loss if it is used.')
 
+    # Device
+    parser.add_argument('--gpu', type=int, dest='gpu',
+                        action='store', default=0, help='gpu, the number of the gpu used for experiment.')
     args = parser.parse_args()
 
     return args
@@ -90,7 +89,16 @@ def main():
 
     prefix = os.path.join(
         "~", "Documents", "DeepLearningData", competition_name)
-    subfix = os.path.join(model_type, date_time)
+
+    loss = args.loss
+    if loss == "focal":
+        exper_type = "focal"
+        subfix = os.path.join(model_type,
+                              exper_type, '-'.join(["alpha", f"{args.alpha}"]), date_time)
+    else:
+        exper_type = "normal"
+        subfix = os.path.join(model_type, exper_type, date_time)
+
     ckpt_dir = os.path.expanduser(os.path.join(prefix, "ckpts", subfix))
     log_dir = os.path.expanduser(os.path.join(prefix, "logs", subfix))
     makedir_exist_ok(ckpt_dir)

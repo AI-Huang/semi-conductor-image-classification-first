@@ -13,12 +13,31 @@ epsilon = backend_config.epsilon
 
 """Focal losses implementation
 Classes:
-Focalloss: focal loss function.
-FocallossSigmoid: pass the y_pred into sigmoid function before calculation.
+ - BinaryFocalLoss: binary focal loss function.
+ - FocallossSigmoid: Keras official focal loss function, will pass the y_pred into sigmoid function before calculation.
 
 Reference:
 https://github.com/tensorflow/models/blob/master/official/vision/keras_cv/losses/focal_loss.py
 """
+
+
+def clip_by_epsilon(y_pred):
+    """clip_by_epsilon
+    clip boundary values on y_pred by epsilon.
+    This is for the case that log(0) is calculated and an NaN yeilds.
+    """
+    y_pred = tf.cast(y_pred, dtype=tf.float32)
+
+    epsilon_ = constant_op.constant(
+        epsilon(), dtype=y_pred.dtype.base_dtype)
+    y_pred_ones_mask = tf.equal(y_pred, 1.)
+    y_pred_zeros_mask = tf.equal(y_pred, 0.)
+    y_pred = tf.where(y_pred_ones_mask, clip_ops.clip_by_value(
+        y_pred, epsilon_, 1. - epsilon_), y_pred)
+    y_pred = tf.where(y_pred_zeros_mask, clip_ops.clip_by_value(
+        y_pred, epsilon_, 1. - epsilon_), y_pred)
+
+    return y_pred
 
 
 class BinaryFocalLoss(tf.keras.losses.Loss):
@@ -68,15 +87,7 @@ class BinaryFocalLoss(tf.keras.losses.Loss):
             y_true = tf.cast(y_true, dtype=tf.float32)
             y_pred = tf.cast(y_pred, dtype=tf.float32)
 
-            # clip boundary values on y_pred
-            epsilon_ = constant_op.constant(
-                epsilon(), dtype=y_pred.dtype.base_dtype)
-            y_pred_ones_mask = tf.equal(y_pred, 1.)
-            y_pred_zeros_mask = tf.equal(y_pred, 0.)
-            y_pred = tf.where(y_pred_ones_mask, clip_ops.clip_by_value(
-                y_pred, epsilon_, 1. - epsilon_), y_pred)
-            y_pred = tf.where(y_pred_zeros_mask, clip_ops.clip_by_value(
-                y_pred, epsilon_, 1. - epsilon_), y_pred)
+            y_pred = clip_by_epsilon(y_pred)
 
             positive_label_mask = tf.equal(y_true, 1.0)
 
