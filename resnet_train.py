@@ -28,6 +28,17 @@ def cmd_parser():
     """
     parser = argparse.ArgumentParser()
 
+    def string2bool(string):
+        """string2bool
+        """
+        if string not in ["False", "True"]:
+            raise argparse.ArgumentTypeError(
+                f"""input(={string}) NOT in ["False", "True"]!""")
+        if string == "False":
+            return False
+        elif string == "True":
+            return True
+
     # Input parameters
     parser.add_argument('--side_length', type=int, dest='side_length',
                         action='store', default=224, help='side_length, the length of image width and height to be cast to.')
@@ -61,6 +72,10 @@ def cmd_parser():
     # Device
     parser.add_argument('--gpu', type=int, dest='gpu',
                         action='store', default=0, help='gpu, the number of the gpu used for experiment.')
+
+    parser.add_argument('--tmp', type=string2bool, dest='tmp',
+                        action='store', default=False, help='tmp, if true, the yielding data during the training process will be saved into a temporary directory.')
+
     args = parser.parse_args()
 
     return args
@@ -87,8 +102,12 @@ def main():
 
     date_time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    prefix = os.path.join(
-        "~", "Documents", "DeepLearningData", competition_name)
+    if args.tmp:
+        import tempfile
+        prefix = tempfile.mkdtemp()
+    else:
+        prefix = os.path.join(
+            "~", "Documents", "DeepLearningData", competition_name)
 
     loss = args.loss
     if loss == "focal":
