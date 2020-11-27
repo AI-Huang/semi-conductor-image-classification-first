@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Date    : Aug-06-20 14:33
 # @Update  : Nov-25-20 03:15
+# @Update  : Nov-27-20 16:32
 # @Author  : Kelly Hwong (dianhuangkan@gmail.com)
 
 
@@ -28,24 +29,30 @@ def makedir_exist_ok(dirpath):
                 raise
 
 
-def delete_experiment_data(model_type, exper_id, prefix="."):
+def get_exper_suffixes(prefix):
+    exper_suffixes = []
+    log_dir = os.path.join(prefix, "logs")
+    for root, dirs, files in os.walk(log_dir):
+        if "train" in dirs:
+            exper_suffixes.append(os.path.relpath(root, log_dir))
+    return exper_suffixes
+
+
+def delete_experiment_data(exper_suffix, prefix="."):
     """delete_experiment_data
-    Delete experiment data according to its model_type and exper_id.
+    Delete experiment data according to its exper_suffix (model_type and exper_id).
     Inputs:
         prefix: experiment data root path, where ckpts and logs directories should exist
     """
-    ckpt_dir_prefix = os.path.expanduser(os.path.join(prefix, "ckpts"))
-    log_dir_prefix = os.path.expanduser(os.path.join(prefix, "logs"))
+    ckpt_dir = os.path.expanduser(os.path.join(prefix, "ckpts"))
+    log_dir = os.path.expanduser(os.path.join(prefix, "logs"))
 
-    ckpt_dir = os.path.join(ckpt_dir_prefix, model_type)
-    log_dir = os.path.join(log_dir_prefix, model_type)
+    dir_to_remove = os.path.join(ckpt_dir, exper_suffix)
+    if os.path.isdir(dir_to_remove):
+        print(f"removing: {dir_to_remove}")
+        shutil.rmtree(dir_to_remove, ignore_errors=True)
 
-    dir_to_remove = os.path.join(ckpt_dir, exper_id)
-    # try:
-    print(f"removing: {dir_to_remove}")
-    shutil.rmtree(dir_to_remove, ignore_errors=True)
-
-    dir_to_remove = os.path.join(log_dir, exper_id)
-    # try:
-    print(f"removing: {dir_to_remove}")
-    shutil.rmtree(dir_to_remove, ignore_errors=True)
+    dir_to_remove = os.path.join(log_dir, exper_suffix)
+    if os.path.isdir(dir_to_remove):
+        print(f"removing: {dir_to_remove}")
+        shutil.rmtree(dir_to_remove, ignore_errors=True)
