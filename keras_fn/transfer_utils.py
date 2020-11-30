@@ -4,15 +4,13 @@
 # @Author  : Kan HUANG (kan.huang@connect.ust.hk)
 # @Link    : https://stackoverflow.com/questions/43702323/how-to-load-only-specific-weights-on-keras
 
-
-from resnet import model_depth
 """Transfer utils
 This code is implemented for transfer model weights from ResNet20v2 to ResNet56v2.
 Note that, both the ResNet20v2 and ResNet56v2 model architecture **must** be built from functions in file *resnet.py* in this folder.
 
 Reference:
-https://github.com/tensorflow/models/blob/master/official/vision/keras_cv/losses/focal_loss.py
 """
+from keras_fn.resnet import model_depth
 
 
 class ResNetParams(object):
