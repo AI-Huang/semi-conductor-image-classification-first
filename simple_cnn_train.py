@@ -48,7 +48,7 @@ def main():
 
     MODEL_CKPT = CONFIG["MODEL_CKPT"]
 
-    """ Create Model """
+    # Create model
     MODEL_TYPE = "simpleCNN"
     SAVES_DIR = "models-%s/" % MODEL_TYPE
     SAVES_DIR = os.path.join(ROOT_PATH, SAVES_DIR)
@@ -61,7 +61,7 @@ def main():
     model.summary()
     print(MODEL_TYPE)
 
-    """ Resume Training """
+    # Resume training
     if os.path.isfile("model-" + MODEL_TYPE + ".h5"):
         print("loading existed model...")
         model.load_weights("model-" + MODEL_TYPE + ".h5")
@@ -79,7 +79,7 @@ def main():
                                                 min_lr=0.00001)
     callbacks = [learning_rate_reduction, checkpoint]  # 不要 earlystop
 
-    """ Training Generator """
+    # Training generator
     print('Using real-time data augmentation.')
     train_datagen = ImageDataGenerator(
         validation_split=0.2,
@@ -103,7 +103,7 @@ def main():
         # seed=42
     )
 
-    """ Validation Generator """
+    # Validation generator
     valid_datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
     validation_generator = valid_datagen.flow_from_directory(
         TRAIN_DATA_DIR,
@@ -115,7 +115,7 @@ def main():
         shuffle=True
     )
 
-    """ Fit Model """
+    # Fit model
     epochs = 3 if IF_FAST_RUN else EPOCHS_OVER_NIGHT
     history = model.fit_generator(
         train_generator,
@@ -126,10 +126,10 @@ def main():
         callbacks=callbacks
     )
 
-    """ Save Model """
+    # Save model
     model.save_weights("model-" + MODEL_TYPE + ".h5")
 
-    """Visualize Training"""
+    # Visualize training
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
     ax1.plot(history.history['loss'], color='b', label="Training loss")
     ax1.plot(history.history['val_loss'], color='r', label="validation loss")

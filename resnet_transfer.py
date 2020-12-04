@@ -42,9 +42,9 @@ def main():
     args = cmd_parser()
 
     # Config GPUs
-    physical_devices = tf.config.list_physical_devices('XLA_GPU')
-    tf.config.set_visible_devices(physical_devices[args.gpu:], 'XLA_GPU')
-    gpu_list = tf.config.list_physical_devices('XLA_GPU')
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.set_visible_devices(physical_devices[args.gpu:], 'GPU')
+    gpu_list = tf.config.list_physical_devices('GPU')
 
     gpus_memory = get_gpu_memory()
     available_gpu_indices = get_available_gpu_indices(gpus_memory)
@@ -75,7 +75,7 @@ def main():
     num_classes = 2
 
     # Create src model: ResNet20v2
-    with tf.device("/device:XLA_GPU:" + str(available_gpu_indices[0])):
+    with tf.device("/device:GPU:" + str(available_gpu_indices[0])):
         src_model = resnet_v2(input_shape=input_shape,
                               depth=model_depth(n=2, version=2), num_classes=num_classes)
 
@@ -85,7 +85,7 @@ def main():
     src_model.load_weights(latest_ckpt)
 
     # Create dest model: ResNet56v2
-    with tf.device("/device:XLA_GPU:" + str(available_gpu_indices[1])):
+    with tf.device("/device:GPU:" + str(available_gpu_indices[1])):
         dest_model = resnet_v2(input_shape=input_shape,
                                depth=model_depth(n=6, version=2), num_classes=num_classes)
     # Do weights transferring
